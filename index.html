@@ -1,0 +1,194 @@
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time to live chicas!! Hora COLOMBIA</title>
+    <!-- Incluye las fuentes 'Dancing Script' y 'Inter' de Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS para el estilo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to bottom right, #fbcfe8, #d8b4fe);
+        }
+        .dancing-script {
+            font-family: 'Dancing Script', cursive;
+        }
+    </style>
+</head>
+<body class="p-6 md:p-10 flex flex-col items-center min-h-screen justify-center">
+
+    <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-lg w-full">
+        <h1 class="dancing-script text-5xl font-bold text-center text-pink-600 mb-4">
+            Time to live chicas!!
+        </h1>
+        <p class="text-center text-gray-700 mb-8 font-medium">
+            ¡Selecciona un horario para tu evento! ¡Vamos a crecer juntas!
+        </p>
+        
+        <div id="schedule-container" class="space-y-4">
+            <!-- Los horarios se renderizarán aquí dinámicamente -->
+        </div>
+    </div>
+
+    <!-- Modal de Reserva (Oculto por defecto) -->
+    <div id="booking-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 text-center">Reservar Horario</h2>
+            <p id="modal-time" class="text-gray-600 mb-4 text-center font-medium"></p>
+            <input id="user-name-input" type="text" placeholder="Ingresa tu Usuario..." class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400">
+            <div class="flex justify-end space-x-4 mt-6">
+                <button id="cancel-btn" class="px-6 py-2 rounded-lg text-gray-700 font-medium hover:bg-gray-200 transition-colors">Cancelar</button>
+                <button id="book-confirm-btn" class="px-6 py-2 rounded-lg text-white font-medium bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transition-colors">Confirmar</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Definimos los elementos del DOM
+        const scheduleContainer = document.getElementById('schedule-container');
+        const bookingModal = document.getElementById('booking-modal');
+        const modalTime = document.getElementById('modal-time');
+        const userNameInput = document.getElementById('user-name-input');
+        const bookConfirmBtn = document.getElementById('book-confirm-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+
+        let selectedSlotIndex = -1;
+
+        // --- Lógica para el ID de usuario único ---
+        let userId = localStorage.getItem('userId');
+        if (!userId) {
+            userId = crypto.randomUUID();
+            localStorage.setItem('userId', userId);
+        }
+
+        // Definimos el estado inicial de los horarios si no hay datos guardados
+        let schedule = [
+            { day: 'Domingo', time: '6:00 PM - 8:00 PM', bookedBy: null, userId: null },
+            { day: 'Domingo', time: '8:00 PM - 10:00 PM', bookedBy: null, userId: null },
+            { day: 'Lunes', time: '20:00 hrs - 22:00 hrs', bookedBy: null, userId: null },
+            { day: 'Martes', time: '18:00 hrs', bookedBy: null, userId: null },
+            { day: 'Martes', time: '20:00 hrs', bookedBy: null, userId: null },
+            { day: 'Martes', time: '22:00 hrs', bookedBy: null, userId: null },
+            { day: 'Miércoles', time: '18:00 hrs', bookedBy: null, userId: null },
+            { day: 'Miércoles', time: '20:00 hrs', bookedBy: null, userId: null },
+            { day: 'Miércoles', time: '22:00 hrs', bookedBy: null, userId: null },
+            { day: 'Jueves', time: '18:00 hrs', bookedBy: null, userId: null },
+            { day: 'Jueves', time: '20:00 hrs', bookedBy: null, userId: null },
+            { day: 'Jueves', time: '22:00 hrs', bookedBy: null, userId: null },
+            { day: 'Viernes', time: '18:00 hrs', bookedBy: null, userId: null },
+            { day: 'Viernes', time: '20:00 hrs', bookedBy: null, userId: null },
+            { day: 'Viernes', time: '22:00 hrs', bookedBy: null, userId: null },
+            { day: 'Sábado', time: '18:00 hrs', bookedBy: null, userId: null },
+            { day: 'Sábado', time: '20:00 hrs', bookedBy: null, userId: null },
+            { day: 'Sábado', time: '22:00 hrs', bookedBy: null, userId: null },
+        ];
+
+        // Función para guardar el horario en el almacenamiento local
+        function saveSchedule() {
+            localStorage.setItem('liveSchedule', JSON.stringify(schedule));
+        }
+
+        // Función para cargar el horario del almacenamiento local
+        function loadSchedule() {
+            const savedSchedule = localStorage.getItem('liveSchedule');
+            if (savedSchedule) {
+                schedule = JSON.parse(savedSchedule);
+            }
+        }
+
+        // Función para renderizar el horario en la interfaz de usuario
+        function renderSchedule() {
+            scheduleContainer.innerHTML = '';
+            
+            schedule.forEach((slot, index) => {
+                const slotElement = document.createElement('div');
+                slotElement.className = 'flex items-center justify-between p-4 bg-purple-50 rounded-xl shadow-md';
+                
+                const timeText = document.createElement('span');
+                timeText.className = 'font-semibold text-lg text-purple-800';
+                timeText.textContent = `${slot.day}: ${slot.time}`;
+
+                const statusText = document.createElement('span');
+                statusText.className = 'text-sm font-medium';
+                
+                const bookButton = document.createElement('button');
+                bookButton.className = 'px-4 py-2 rounded-full font-medium transition-all duration-200';
+                
+                if (slot.bookedBy) {
+                    // Ahora muestra el nombre del usuario si los IDs coinciden
+                    if (slot.userId === userId) {
+                        statusText.textContent = `Ocupado por ${slot.bookedBy}`;
+                    } else {
+                        statusText.textContent = 'Ocupado';
+                    }
+                    
+                    statusText.classList.add('text-pink-600');
+                    bookButton.textContent = 'Ocupado';
+                    bookButton.disabled = true;
+                    bookButton.classList.add('bg-pink-200', 'text-pink-800', 'cursor-not-allowed');
+                } else {
+                    statusText.textContent = 'Disponible';
+                    statusText.classList.add('text-purple-600');
+                    bookButton.textContent = 'Reservar';
+                    bookButton.disabled = false;
+                    bookButton.classList.add('text-white', 'bg-gradient-to-r', 'from-purple-500', 'to-pink-500', 'hover:from-purple-600', 'hover:to-pink-600', 'focus:outline-none', 'focus:ring-2', 'focus:ring-pink-400', 'focus:ring-opacity-50');
+                    
+                    bookButton.onclick = () => {
+                        showBookingModal(index);
+                    };
+                }
+
+                slotElement.appendChild(timeText);
+                slotElement.appendChild(statusText);
+                slotElement.appendChild(bookButton);
+                
+                scheduleContainer.appendChild(slotElement);
+            });
+        }
+
+        // Función para mostrar el modal de reserva
+        function showBookingModal(index) {
+            selectedSlotIndex = index;
+            modalTime.textContent = `Horario: ${schedule[index].day}, ${schedule[index].time}`;
+            userNameInput.value = '';
+            bookingModal.classList.remove('hidden');
+        }
+
+        // Función para ocultar el modal
+        function hideBookingModal() {
+            bookingModal.classList.add('hidden');
+        }
+
+        // Event listener para confirmar la reserva
+        bookConfirmBtn.addEventListener('click', () => {
+            const userName = userNameInput.value.trim();
+            if (userName) {
+                schedule[selectedSlotIndex].bookedBy = userName;
+                schedule[selectedSlotIndex].userId = userId; // Guarda el ID de usuario
+                saveSchedule(); // Guardamos el cambio
+                renderSchedule();
+                hideBookingModal();
+            } else {
+                console.log('El nombre de usuario no puede estar vacío.');
+                // Podrías agregar un mensaje de error visible para el usuario aquí si lo prefieres
+            }
+        });
+
+        // Event listener para cancelar la reserva
+        cancelBtn.addEventListener('click', () => {
+            hideBookingModal();
+        });
+
+        // Cargamos los horarios y los renderizamos al cargar la página
+        window.onload = () => {
+            loadSchedule();
+            renderSchedule();
+        };
+    </script>
+
+</body>
+</html>
